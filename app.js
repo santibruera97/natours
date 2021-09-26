@@ -2,20 +2,64 @@ const express = require('express');
 const morgan = require('morgan');
 const AppError = require('./utils/AppError');
 const globalErrorHandler = require('./controllers/errorController');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp');
 
 const tourRouter = require('./routes/tourRoutes');
 
 const userRouter = require('./routes/userRoutes');
 
+const reviewRouter = require('./routes/reviewRoutes');
+
 const app = express();
 
+//Development loggin
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-app.use(express.json());
+//Security HTTP Headers
 
+app.use(helmet());
+
+//Liting Request
+
+const limiter = rateLimit({
+  max: 500,
+  windowMs: 60 * 60 * 1000,
+  message: 'Too many request from this IP, please try again in a hour',
+});
+
+app.use('/api', limiter);
+
+//Body parser, reading data into req.body
+
+app.use(express.json({ limit: '10kb' }));
+
+//Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+//Data sanitization against XSS
+app.use(xss());
+//Prevent parameter polution
+app.use(
+  hpp({
+    whitelist: [
+      'duration',
+      'ratingsQuantity',
+      'ratingsAverage',
+      'maxGroupSize',
+      'difficulty',
+      'price',
+    ],
+  })
+);
+//Serving statics files
 app.use(express.static(`${__dirname}/public`));
+
+//Testing middleware
 
 app.use((req, res, next) => {
   req.requesTime = new Date().toISOString();
@@ -23,9 +67,10 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/v1/tours', tourRouter);
+app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/users', userRouter);
 
-app.all('*',(req,res,next) => {
+app.all('*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl}`, 404));
 });
 
