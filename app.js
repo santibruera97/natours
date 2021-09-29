@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const morgan = require('morgan');
 const AppError = require('./utils/AppError');
 const globalErrorHandler = require('./controllers/errorController');
@@ -15,6 +16,12 @@ const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/reviewRoutes');
 
 const app = express();
+
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'views'));
+
+//Serving statics files
+app.use(express.static(path.join(__dirname, 'views')));
 
 //Development loggin
 if (process.env.NODE_ENV !== 'production') {
@@ -56,14 +63,16 @@ app.use(
     ],
   })
 );
-//Serving statics files
-app.use(express.static(`${__dirname}/public`));
 
 //Testing middleware
 
 app.use((req, res, next) => {
   req.requesTime = new Date().toISOString();
   next();
+});
+
+app.get('/', (req, res) => {
+  res.status(200).render('base');
 });
 
 app.use('/api/v1/tours', tourRouter);
