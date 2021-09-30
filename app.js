@@ -15,13 +15,15 @@ const userRouter = require('./routes/userRoutes');
 
 const reviewRouter = require('./routes/reviewRoutes');
 
+const viewRouter = require('./routes/viewRoutes');
+
 const app = express();
 
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 
 //Serving statics files
-app.use(express.static(path.join(__dirname, 'views')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 //Development loggin
 if (process.env.NODE_ENV !== 'production') {
@@ -71,10 +73,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/', (req, res) => {
-  res.status(200).render('base');
-});
-
+app.use('/', viewRouter);
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/users', userRouter);
